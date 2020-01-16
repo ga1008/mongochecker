@@ -1,0 +1,3 @@
+[console_scripts]
+mongochecker = MongodbDuplicateChecker.delete_duplicate:starter
+

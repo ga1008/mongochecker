@@ -1,0 +1,31 @@
+Metadata-Version: 2.1
+Name: mongochecker
+Version: 0.0.1
+Summary: a tool to remove mongodb duplicate data
+Home-page: https://github.com/GuardianGH/scrapydartx
+Author: Guardian
+Author-email: zhling2012@live.com
+Maintainer: Guardian
+Maintainer-email: zhling2012@live.com
+License: UNKNOWN
+Description: 移除 mongodb 的重复数据的小工具
+        ===
+        ### 安装: 
+        
+        ```shell script
+        $ pip install mongochecker
+        ```
+        
+        
+        ### 运行:  
+        
+        ```shell script
+        $ mongochecker
+        ```
+        
+        ## 数据贵无价 操作需谨慎
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
