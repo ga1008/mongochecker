@@ -1,3 +1,4 @@
 [console_scripts]
-mongochecker = MongodbDuplicateChecker.delete_duplicate:starter
+mongochecker = MongodbDuplicateChecker.delete_duplicate:dl_starter
+mongocopy = MongodbDuplicateChecker.delete_duplicate:cp_starter
 

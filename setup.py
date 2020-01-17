@@ -11,9 +11,9 @@ using_setuptools = True
 
 setup_args = {
     'name': 'mongochecker',
-    'version': '0.0.1',
+    'version': '0.0.2',
     'url': 'https://github.com/ga1008/mongochecker',
-    'description': 'a tool to remove mongodb duplicate data',
+    'description': 'a tool to remove mongodb duplicate data or copy mongodb data',
     'long_description': open('README.md', encoding="utf-8").read(),
     'author': 'Guardian',
     'author_email': 'zhling2012@live.com',
@@ -25,7 +25,10 @@ setup_args = {
     'include_package_data': True,
     'zip_safe': False,
     'entry_points': {
-        'console_scripts': ['mongochecker = MongodbDuplicateChecker.delete_duplicate:starter']
+        'console_scripts': [
+            'mongochecker = MongodbDuplicateChecker.delete_duplicate:dl_starter',
+            'mongocopy = MongodbDuplicateChecker.delete_duplicate:cp_starter'
+            ]
         },
 
     'classifiers': [
