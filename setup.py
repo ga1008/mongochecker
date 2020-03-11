@@ -1,20 +1,14 @@
-import sys
-
 import setuptools
 from setuptools import setup
 
 using_setuptools = True
 
-#
-# with open('scrapydartx/VERSION') as f:
-#     version = f.read().strip()
-
 setup_args = {
-    'name': 'mongochecker',
+    'name': 'mongocheck',
     'version': '0.0.3',
     'url': 'https://github.com/ga1008/mongochecker',
     'description': 'a tool to remove mongodb duplicate data or copy mongodb data',
-    'long_description': open('README.md', encoding="utf-8").read(),
+    # 'long_description': open('README.md', encoding="utf-8").read(),
     'author': 'Guardian',
     'author_email': 'zhling2012@live.com',
     'maintainer': 'Guardian',
@@ -26,7 +20,7 @@ setup_args = {
     'zip_safe': False,
     'entry_points': {
         'console_scripts': [
-            'mongochecker = MongodbDuplicateChecker.delete_duplicate:dl_starter',
+            'mongocheck = MongodbDuplicateChecker.delete_duplicate:dl_starter',
             'mongocopy = MongodbDuplicateChecker.delete_duplicate:cp_starter'
             ]
         },
@@ -36,6 +30,9 @@ setup_args = {
                     "License :: OSI Approved :: MIT License",
                     "Operating System :: OS Independent",
                 ],
+    'install_requires': ['tqdm',
+                         'pymongo'
+                         ],
 }
 
-setup(**setup_args, install_requires=['tqdm', 'pymongo'])
+setup(**setup_args)

@@ -7,7 +7,7 @@
 ### 安装: 
 
 ```shell script
-$ pip install mongochecker
+$ pip install mongocheck
 ```
 
 ## 1. 去重功能介绍:
@@ -15,7 +15,7 @@ $ pip install mongochecker
 ### 运行:  
 
 ```shell script
-$ mongochecker [mongodb setting file path]
+$ mongocheck [mongodb setting file path]
 ```
 
 ### mongodb setting file 格式:

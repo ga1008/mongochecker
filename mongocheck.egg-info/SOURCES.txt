@@ -1,0 +1,11 @@
+README.md
+setup.py
+MongodbDuplicateChecker/__init__.py
+MongodbDuplicateChecker/delete_duplicate.py
+mongocheck.egg-info/PKG-INFO
+mongocheck.egg-info/SOURCES.txt
+mongocheck.egg-info/dependency_links.txt
+mongocheck.egg-info/entry_points.txt
+mongocheck.egg-info/not-zip-safe
+mongocheck.egg-info/requires.txt
+mongocheck.egg-info/top_level.txt

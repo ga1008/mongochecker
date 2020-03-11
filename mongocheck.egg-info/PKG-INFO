@@ -1,5 +1,5 @@
 Metadata-Version: 2.1
-Name: mongochecker
+Name: mongocheck
 Version: 0.0.3
 Summary: a tool to remove mongodb duplicate data or copy mongodb data
 Home-page: https://github.com/ga1008/mongochecker
