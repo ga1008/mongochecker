@@ -9,6 +9,42 @@ from pymongo.errors import OperationFailure
 from tqdm import tqdm
 
 
+def printer(msg, length_ctrl=True, fill_with='-', alignment='l', msg_head_tail=None, print_out=True, reflash=False):
+    try:
+        length = os.get_terminal_size().columns
+    except:
+        length = 150
+    al = {'l': '<', 'r': '>', 'm': '^'}.get(alignment)
+    if not msg_head_tail:
+        msg_head_tail = [' >>> ', '']
+    if isinstance(msg_head_tail, str):
+        msg_head_tail = [msg_head_tail, '']
+    elif not isinstance(msg_head_tail, list):
+        try:
+            msg_head_tail = list(msg_head_tail)
+        except:
+            pass
+    msg_head_tail = [' {} '.format(x) if x else '' for x in msg_head_tail]
+    if not isinstance(msg, str):
+        msg = str(msg)
+    if length_ctrl:
+        if isinstance(length_ctrl, int) and length_ctrl > 1:
+            length = length_ctrl
+        if len(msg) > length:
+            msg = f" {msg[:(length - 10)]} ..."
+        else:
+            msg = f" {msg} "
+    msg = msg_head_tail[0] + msg + msg_head_tail[1]
+    msg = ("{:%s%s%s}" % (fill_with, al, length + len(''.join(msg_head_tail)))).format(msg)
+    if print_out:
+        if not reflash:
+            print(msg)
+        else:
+            print(f"{msg}\r", end='')
+    else:
+        return msg
+
+
 class MongodbDuplicateChecker(object):
     def __init__(self, args):
         self.default_mos_path = 'mongodb_server.json'
@@ -23,21 +59,24 @@ class MongodbDuplicateChecker(object):
         self.check_keys = self._get_check_keys(mos)
 
     def start(self):
-        print('---------- processing target [ {} ] ----------'.format(self.collection))
-        db_data = self.db_set.find(no_cursor_timeout=True, batch_size=10000)
+        printer('system start', fill_with='=', alignment='m')
+        printer(f'processing target [ {self.collection} ]')
+        db_data = self.db_set.find(no_cursor_timeout=True, batch_size=1000)
         self._process(db_data=db_data)
-        print('--------- [ {} ] duplicate check done --------'.format(self.collection))
+        printer(f'[ {self.collection} ] duplicate check done')
 
-    def _process(self, db_data, check_only=False):
+    def _process(self, db_data):
+        warn = "Data is INVALUABLE! " \
+               "Please make sure you are fully understanding what you are doing in the following steps!"
+        printer(warn, fill_with='$', msg_head_tail=['\n', '\n'])
+        time.sleep(3)
         counter = set()
-        duplicate_data = 0
+        del_set = set()
         del_success = 0
         total = 0
-        find_dit = {x: 1 for x in self.check_keys}
-        find_dit.update({"_id": 0})
-        raw_data = db_data
+        printer('start checking')
         t = tqdm(total=db_data.count())
-        for data in raw_data:
+        for data in db_data:
             d_lis = []
             for x in self.check_keys:
                 value = eval('data["' + '"]["'.join(x.split('.')) + '"]')
@@ -46,21 +85,29 @@ class MongodbDuplicateChecker(object):
             if d_str not in counter:
                 counter.add(d_str)
             else:
-                duplicate_data += 1
-                if not check_only:
-                    try:
-                        d_count = self.db_set.delete_one(data)
-                        del_success += d_count.deleted_count
-                    except Exception as E:
-                        print("delete err! {}".format(E))
-                        continue
+                del_set.add(data)
             t.update()
             total += 1
         t.close()
-        if duplicate_data:
-            print("done! total: {}, duplicate_data: {}, delete success: {}".format(total, duplicate_data, del_success))
+        printer('check done')
+        duplicate_count = len(del_set)
+        if duplicate_count > 0:
+            printer(f"done! total: [ {total} ], duplicate data: [ {duplicate_count} ]")
+            del_sta = input('Do you warn to delete them all? (y/n): ').lower()
+            if del_sta == 'y':
+                tq = tqdm(total=duplicate_count)
+                for dt in del_set:
+                    try:
+                        d_count = self.db_set.delete_one(dt)
+                        del_success += d_count.deleted_count
+                    except Exception as E:
+                        printer(f"delete err! {E}")
+                        continue
+                    tq.update()
+                tq.close()
+                printer(f'delete success: [ {del_success} ]')
         else:
-            print("done! total: {}, no duplicate data found".format(total))
+            printer(f'total: [ {total} ], no duplicate data found')
 
     def _get_check_keys(self, mos):
         check_keys = mos.get('check_keys')
@@ -69,10 +116,10 @@ class MongodbDuplicateChecker(object):
         doc = self.db_set.find_one()
         doc = dict(doc) if doc else dict()
         keys_lis = self._get_key_path(doc)
-        print('------------ keys names in [ {} ]: ------------'.format(self.collection))
+        printer(f'keys in [ {self.collection} ]', fill_with='*', alignment='m')
         for i, name in enumerate(keys_lis):
-            print("[ {} ]: {}".format(i, name))
-        print('--------------------------------------------------------')
+            printer(f"[ {i} ]: {name}")
+        printer('', fill_with='*')
         sel = input("input the nums of the keys to check duplicate(such as: 1,2,3), empty to cancel: ")
         if sel:
             sel = re.findall(r'\d+', sel)
@@ -83,7 +130,7 @@ class MongodbDuplicateChecker(object):
             if ch == 'y':
                 self._get_check_keys(mos)
             else:
-                sys.exit(1)
+                os._exit(0)
 
     def _get_key_path(self, dic, key_up='', sep='.'):
         """
@@ -106,11 +153,11 @@ class MongodbDuplicateChecker(object):
         names = mos.get('collection')
         if names:
             return names
-        names = self.db.list_collection_names(include_system_collections=False)
-        print("------------ collection names: ------------")
+        names = self.db.collection_names(include_system_collections=False)
+        printer('collection names:', fill_with='*', alignment='m', msg_head_tail=['*', '*'])
         for i, name in enumerate(names):
-            print("[ {} ]: {}".format(i, name))
-        print('------------------------------------------')
+            printer(f"[ {i} ]: {name}")
+        printer('', fill_with='*')
         sel = input("chose the num of the collection's name to process: ")
         sel = re.findall(r'\d+', sel)
         sel = int(sel[0]) if sel else None
@@ -126,15 +173,15 @@ class MongodbDuplicateChecker(object):
             names = self.client.list_database_names()
             self._save_into_file(mos)
         except OperationFailure:
-            print('the mongodb setting maybe wrong! please check it and restart')
+            printer('the mongodb setting maybe wrong! please check it and restart')
             for k, v in mos.items():
-                print("{}: {}".format(k, v))
+                printer(f"{k}: {v}")
             sys.exit(1)
 
-        print("------------ database names: ------------")
+        printer("database names:", fill_with='*', alignment='m', msg_head_tail=['*', '*'])
         for i, name in enumerate(names):
-            print("[ {} ]: {}".format(i, name))
-        print('------------------------------------------')
+            printer(f"[ {i} ]: {name}")
+        printer('', fill_with='*')
         sel = input("chose the num of the database's name to process: ")
         sel = re.findall(r'\d+', sel)
         sel = int(sel[0]) if sel else None
@@ -152,11 +199,11 @@ class MongodbDuplicateChecker(object):
                 mos_lis_raw = json.loads(rf.read())
             if isinstance(mos_lis_raw, dict):
                 mos_lis_raw = [mos_lis_raw]
-            print('---- servers in the {} file: ----'.format(mos_file))
+            printer(f'servers found [ {mos_file} ]:', fill_with='*', alignment='m')
             for i, dic in enumerate(mos_lis_raw):
                 mos_info = "{}:{}, {}, {}".format(dic.get('host'), dic.get('port'), dic.get('name'), dic.get('source'))
-                print("[ {} ]: {}".format(i, mos_info))
-            print('---- ------------------------------------ ----')
+                printer(f"[ {i} ]: {mos_info}")
+            printer('', fill_with='*')
             selection = input('chose the num of the server: ')
             selection = re.findall(r'\d+', selection)
             selection = int(selection[0]) if selection else None
@@ -165,7 +212,7 @@ class MongodbDuplicateChecker(object):
             mos_temp = mos_lis_raw[selection]
             return mos_temp
         else:
-            print('mongodb_servers file not exits! ')
+            printer('mongodb_servers file not exits! ')
             inp = input('input the path to another file(p), or input mongodb setting(m): ').lower()
             if inp == 'p':
                 m_path = input('path to mongodb setting: ')
@@ -199,8 +246,8 @@ class MongodbDuplicateChecker(object):
         return uri
 
     def __del__(self):
+        printer('system exit', fill_with='=')
         self.client.close()
-        print('system exit')
 
 
 class MongodbCopy(object):
@@ -215,17 +262,17 @@ class MongodbCopy(object):
         self.todb = None
         self.todb_set = None
         self.condition = None
+        self.tdb_str = None
         self.f_mos = self._get_from_mos()
         self.t_mos = self._get_to_mos()
         self.filter = self._get_filter()
         self._save_mos(self.f_mos, self.t_mos)
 
     def start_copy(self):
-        to_data = {}
         to_data_set = set()
         if self.filter:
             to_data = self.todb_set.find()
-            print('------------- preparing the "to" data ------------')
+            printer(f'preparing target [ {self.tdb_str} ] data')
             tt = tqdm(total=self.todb_set.count_documents({}))
             for data in to_data:
                 tt.update()
@@ -240,10 +287,10 @@ class MongodbCopy(object):
                     pass
             tt.close()
             time.sleep(0.1)
-            print('-------------- "to" data ready -------------------')
+            printer('target ready')
         from_data = self.fromdb_set.find(self.condition)
         from_count = self.fromdb_set.count_documents(self.condition)
-        print('------------------ start copy ---------------------')
+        printer('start copy ...')
         time.sleep(0.1)
         t = tqdm(total=from_count)
         count = 0
@@ -268,33 +315,35 @@ class MongodbCopy(object):
             t.update()
         t.close()
         time.sleep(0.1)
-        print('------------------ process done ---------------------')
-        print('copy to [ {} ] done! total: [ {} ], success: [ {} ], duplicate [ {} ]'.format(
-            self.todb_collection, from_count, count, dup_count))
+        printer('process done')
+        printer(f'copy done! total: [ {from_count} ], success: [ {count} ], duplicate [ {dup_count} ]')
 
     def _get_filter(self):
         filter_ori = self.t_mos.get('filter')
         i_info = "input check keys(input 'i' to direct insert, empty to show all keys): "
         if filter_ori:
-            i_info = "input check keys({}, input 'i' to direct insert, empty to show all keys): ".format(filter_ori)
-        sel = input(i_info)
+            i_info = f"input check keys({filter_ori}, input 'i' to direct insert, empty to show all keys): "
+        sel = filter_ori or input(i_info)
         if sel.lower() == 'i':
-            return
+            return None
         if sel:
             try:
-                sel = json.loads(sel)
+                sel = json.loads(json.dumps(sel))
             except:
-                print('wrong input, make sure it is a json format')
+                printer('wrong input, make sure it is a json format')
                 time.sleep(1)
                 return self._get_filter()
         else:
             sel = self._get_check_keys(self.t_mos)
             if not sel:
                 return self._get_filter()
+            elif sel == 'no':
+                printer(f'Collection [ {self.todb_collection} ] not exist, will create it')
+                return None
         return sel
 
     def _get_from_mos(self):
-        print(' -------------- copy data from: ---------------')
+        printer('copy data from:')
         if os.path.exists(self.default_mos_path):
             with open(self.default_mos_path, 'r') as rf:
                 mos_raw = json.loads(rf.read())
@@ -331,7 +380,7 @@ class MongodbCopy(object):
         return dic
 
     def _get_to_mos(self):
-        print(' -------------- copy data to: ---------------')
+        printer('copy data to:')
         if os.path.exists(self.default_mos_path):
             with open(self.default_mos_path, 'r') as rf:
                 mos_raw = json.loads(rf.read())
@@ -346,6 +395,7 @@ class MongodbCopy(object):
             self.todb = self.todb_client[t_db]
             t_col = self._set_to_col(t_md.get('to_collection') or self.fromdb_collection)
             self.todb_collection = t_col
+            self.tdb_str = f"{t_host}:{t_db}.{t_col}"
             fil = t_md.get('filter')
         else:
             t_host = input('host({}): '.format('127.0.0.1')) or '127.0.0.1'
@@ -358,7 +408,8 @@ class MongodbCopy(object):
             self.todb = self.todb_client[t_db]
             t_col = self._set_to_col(self.fromdb_collection)
             self.todb_collection = t_col
-            fil = {}
+            self.tdb_str = f"{t_host}:{t_db}.{t_col}"
+            fil = []
 
         self.todb_set = self.todb[self.todb_collection]
         dic = {'host': t_host, 'port': t_port, 'user': t_user, 'password': t_pwd, 'source': t_source, 'db': t_db, 'to_collection': t_col, 'filter': fil}
@@ -378,10 +429,10 @@ class MongodbCopy(object):
         if sel:
             return sel
         db_names = db.list_database_names()
-        print("------------ database names: ------------")
+        printer("database names:", fill_with='*', alignment='m', msg_head_tail=['*', '*'])
         for i, name in enumerate(db_names):
-            print("[ {} ]: {}".format(i, name))
-        print('------------------------------------------')
+            printer(f"[ {i} ]: {name}")
+        printer('*', fill_with='*')
         sel = input("chose the num of the database's name: ")
         if sel:
             return db_names[int(sel)]
@@ -394,10 +445,10 @@ class MongodbCopy(object):
             return sel
 
         names = db.list_collection_names(include_system_collections=False)
-        print("------------ collection names: ------------")
+        printer("collection names:", fill_with='*', alignment='m', msg_head_tail=['*', '*'])
         for i, name in enumerate(names):
-            print("[ {} ]: {}".format(i, name))
-        print('------------------------------------------')
+            printer(f"[ {i} ]: {name}")
+        printer('*', fill_with='*')
         sel = input("chose the num of the collection's name: ")
         sel = re.findall(r'\d+', sel)
         sel = int(sel[0]) if sel else None
@@ -429,17 +480,17 @@ class MongodbCopy(object):
             doc = db_set.find_one()
             doc = dict(doc) if doc else dict()
             keys_lis = self._get_key_path(doc)
-            print('------------ keys names in [ {} ]: ------------'.format(collection))
+            printer(f'keys in [ {collection} ]:', fill_with='*', alignment='m', msg_head_tail=['*', '*'])
             for i, name in enumerate(keys_lis):
-                print("[ {} ]: {}".format(i, name))
-            print('--------------------------------------------------------')
+                printer(f"[ {i} ]: {name}")
+            printer('*', fill_with='*')
             sel = input("input condition dict(such as {'%s': 'condition_value'}), input 'a' to copy all data: " % keys_lis[-1])
             if sel == 'a':
                 return {}
         try:
             sel = json.loads(sel)
         except:
-            print('wrong input, make sure it is a json format')
+            printer('wrong input, make sure it is a json format')
             time.sleep(1)
             return self._get_filer(db_set, collection)
         return sel
@@ -468,10 +519,12 @@ class MongodbCopy(object):
         doc = self.todb_set.find_one()
         doc = dict(doc) if doc else dict()
         keys_lis = self._get_key_path(doc)
-        print('------------ keys names in [ {} ]: ------------'.format(self.todb_collection))
+        if not keys_lis:
+            return 'no'
+        printer(f'keys in [ {self.todb_collection} ]:', fill_with='*', alignment='m', msg_head_tail=['*', '*'])
         for i, name in enumerate(keys_lis):
-            print("[ {} ]: {}".format(i, name))
-        print('--------------------------------------------------------')
+            printer(f"[ {i} ]: {name}")
+        printer('*', fill_with='*')
         sel = input("input the nums of the keys to check duplicate(such as: 1,2,3), empty to cancel: ")
         if sel:
             sel = re.findall(r'\d+', sel)
@@ -497,7 +550,7 @@ class MongodbCopy(object):
     def __del__(self):
         self.fromdb_client.close()
         self.todb_client.close()
-        print('system exits')
+        printer('system exits')
 
 
 def dl_starter(args=None):
@@ -513,8 +566,5 @@ def cp_starter(args=None):
 
 
 if __name__ == '__main__':
-    # arg = sys.argv[1] if len(sys.argv) > 1 else None
-    # starter(arg)
-
     mcy = MongodbCopy()
     mcy.start_copy()
