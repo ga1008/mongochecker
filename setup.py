@@ -5,7 +5,7 @@ using_setuptools = True
 
 setup_args = {
     'name': 'mongocheck',
-    'version': '0.0.3',
+    'version': '0.0.4',
     'url': 'https://github.com/ga1008/mongochecker',
     'description': 'a tool to remove mongodb duplicate data or copy mongodb data',
     # 'long_description': open('README.md', encoding="utf-8").read(),

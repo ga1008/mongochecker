@@ -35,7 +35,7 @@ def printer(msg, length_ctrl=True, fill_with='-', alignment='l', msg_head_tail=N
         else:
             msg = f" {msg} "
     msg = msg_head_tail[0] + msg + msg_head_tail[1]
-    msg = ("{:%s%s%s}" % (fill_with, al, length + len(''.join(msg_head_tail)))).format(msg)
+    msg = ("{:%s%s%s}" % (fill_with, al, length)).format(msg)
     if print_out:
         if not reflash:
             print(msg)
