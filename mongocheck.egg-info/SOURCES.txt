@@ -2,6 +2,7 @@ README.md
 setup.py
 MongodbDuplicateChecker/__init__.py
 MongodbDuplicateChecker/delete_duplicate.py
+MongodbDuplicateChecker/gears.py
 mongocheck.egg-info/PKG-INFO
 mongocheck.egg-info/SOURCES.txt
 mongocheck.egg-info/dependency_links.txt
