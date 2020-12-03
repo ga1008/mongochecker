@@ -27,7 +27,7 @@ class MongodbDuplicateChecker(object):
     def start(self):
         printer('system start', fill_with='=', alignment='m')
         printer(f'processing target [ {self.collection} ]')
-        db_data = self.db_set.find(no_cursor_timeout=True, batch_size=1000)
+        db_data = self.db_set.find({}, {x: 1 for x in self.check_keys}, no_cursor_timeout=True, batch_size=1000)
         self._process(db_data=db_data)
         printer(f'[ {self.collection} ] duplicate check done')
 
@@ -51,7 +51,7 @@ class MongodbDuplicateChecker(object):
             if d_str not in counter:
                 counter.add(d_str)
             else:
-                del_set.add(data)
+                del_set.add(data.get("_id"))
             t.update()
             total += 1
         t.close()
@@ -64,8 +64,8 @@ class MongodbDuplicateChecker(object):
                 tq = tqdm(total=duplicate_count)
                 for dt in del_set:
                     try:
-                        d_count = self.db_set.delete_one(dt)
-                        del_success += d_count.deleted_count
+                        self.db_set.delete_one({"_id": dt})
+                        del_success += 1
                     except Exception as E:
                         printer(f"delete err! {E}")
                         continue
@@ -119,7 +119,7 @@ class MongodbDuplicateChecker(object):
         names = mos.get('collection')
         if names:
             return names
-        names = self.db.collection_names(include_system_collections=False)
+        names = self.db.list_collection_names(include_system_collections=False)
         printer('collection names:', fill_with='*', alignment='m', msg_head_tail=['*', '*'])
         for i, name in enumerate(names):
             printer(f"[ {i} ]: {name}")
@@ -251,7 +251,8 @@ class MongodbCopy(object):
             cp_msg = f"copy start: from [ {self.f_db_signature} ] to [ {self.t_db_signature} ]"
             printer(cp_msg, alignment='m', msg_head_tail=['', ''], fill_with='*')
             if self.filter:
-                to_data = self.todb_set.find(no_cursor_timeout=True, batch_size=1000)
+                to_data = self.todb_set.find({}, {x: 1 for x in self.filter},
+                                             no_cursor_timeout=True, batch_size=1000)
                 printer(f'preparing target [ {self.tdb_str} ] data')
                 tt = tqdm(total=t_count)
                 for data in to_data:
@@ -268,7 +269,7 @@ class MongodbCopy(object):
                 tt.close()
                 time.sleep(0.1)
                 printer('target ready')
-            from_data = self.fromdb_set.find(self.condition, no_cursor_timeout=True, batch_size=500, skip=f_skip)
+            from_data = self.fromdb_set.find(self.condition, {x: 1 for x in self.filter}, no_cursor_timeout=True, batch_size=500, skip=f_skip)
             printer('start copy ...')
             time.sleep(0.1)
             t = tqdm(total=f_count-f_skip)
@@ -535,5 +536,9 @@ def cp_starter(args=None):
 
 
 if __name__ == '__main__':
-    mcy = MongodbCopy()
-    mcy.start_copy()
+    # mcy = MongodbCopy()
+    # mcy.start_copy()
+
+    mck = MongodbDuplicateChecker(None)
+    mck.start()
+

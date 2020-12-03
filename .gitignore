@@ -1,0 +1,4 @@
+/mongocheck.egg-info
+/mongochecker.egg-info
+/build
+MongodbDuplicateChecker/mongodb_server.json
