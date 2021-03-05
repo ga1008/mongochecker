@@ -52,14 +52,16 @@ class MongodbDuplicateChecker(object):
         for data in db_data:
             d_lis = []
             for x in self.check_keys:
-                value = eval('data["' + '"]["'.join(x.split('.')) + '"]')
-                d_lis.append(str(value))
-            d_str = '-'.join(d_lis)
-            if d_str not in counter:
-                counter.add(d_str)
-            else:
-                del_set.add(data.get("_id"))
-            t.update()
+                value = eval("data.get('" + "', {}).get('".join(x.split('.')) + "', '')")
+                if value:
+                    d_lis.append(str(value))
+            if d_lis:
+                d_str = '-'.join(d_lis)
+                if d_str not in counter:
+                    counter.add(d_str)
+                else:
+                    del_set.add(data.get("_id"))
+                t.update()
             total += 1
         t.close()
         printer('check done')
@@ -94,7 +96,16 @@ class MongodbDuplicateChecker(object):
         for i, name in enumerate(keys_lis):
             printer(f"[ {red(i)} ]: {yellow(name)}")
         printer('', fill_with='*')
-        sel = input(f"input the {red('nums')} of the keys to check duplicate(such as: 1,2,3), empty to cancel: ")
+        print(f"input the {red('nums')} of the keys to check duplicate(such as: 1,2,3)")
+        print("empty to cancel")
+        sel = input(red(" 'i' ") + "to manual input: ").strip()
+        if sel == 'i':
+            input_keys = input("MANUAL INPUT(use ',' to separate each keys: key1,key2.key_lv2,key3): ").strip()
+            input_keys = [x.strip() for x in input_keys.split(',')] if input_keys else []
+            if not input_keys:
+                print("wrong input!")
+                exit(0)
+            return input_keys
         if sel:
             sel = re.findall(r'\d+', sel)
             sel = [int(x) for x in sel if int(x) in range(len(keys_lis))] if sel else []
@@ -290,10 +301,12 @@ class MongodbCopy(object):
                     try:
                         d_lis = []
                         for x in self.filter:
-                            value = eval('data["' + '"]["'.join(x.split('.')) + '"]')
-                            d_lis.append(str(value))
-                        d_str = '>'.join(d_lis)
-                        to_data_set.add(d_str)
+                            value = eval("data.get('" + "', {}).get('".join(x.split('.')) + "', '')")
+                            if value:
+                                d_lis.append(str(value))
+                        if d_lis:
+                            d_str = '>'.join(d_lis)
+                            to_data_set.add(d_str)
                     except:
                         pass
                 tt.close()
@@ -309,9 +322,11 @@ class MongodbCopy(object):
                 try:
                     d_key = []
                     for x in self.filter:
-                        value = eval('d["' + '"]["'.join(x.split('.')) + '"]')
-                        d_key.append(str(value))
-                    d_key = '>'.join(d_key)
+                        value = eval("data.get('" + "', {}).get('".join(x.split('.')) + "', '')")
+                        if value:
+                            d_key.append(str(value))
+                    if d_key:
+                        d_key = '>'.join(d_key)
                 except:
                     d_key = ">".format([x for x in d.values()])
                 if d_key not in to_data_set:
@@ -587,11 +602,8 @@ def cp_starter(args=None):
 
 
 if __name__ == '__main__':
-    # mcy = MongodbCopy()
-    # mcy.start_copy()
-
-    # mck = MongodbDuplicateChecker(None)
+    # mck = MongodbDuplicateChecker()
     # mck.start()
 
-    cp_starter()
-    # dl_starter()
+    # cp_starter()
+    dl_starter()
