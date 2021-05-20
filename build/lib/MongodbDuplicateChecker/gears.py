@@ -1,3 +1,4 @@
+import hashlib
 import os
 import time
 
@@ -50,3 +51,14 @@ def printer(msg=None, length_ctrl=True, fill_with='-', alignment='l', msg_head_t
             print(f"{msg}\r", end='')
     else:
         return msg
+
+
+def gen_hash(string: str):
+    md = hashlib.md5()  # bytes
+    md.update(string.encode())  # encode
+    res = md.hexdigest()
+    return res
+
+
+if __name__ == '__main__':
+    printer("$", fill_with='$', msg_head_tail=['', ''])
